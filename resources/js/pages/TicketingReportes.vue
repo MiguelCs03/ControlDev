@@ -201,19 +201,49 @@ const cargarEstadisticas = async () => {
   }
 }
 
-const exportarReporte = () => {
-  const params = new URLSearchParams()
-  
+const exportarReporte = async () => {
+  const params = {}
+
   if (filtros.value.proyecto_id) {
-    params.append('proyecto_id', filtros.value.proyecto_id)
+    params.proyecto_id = filtros.value.proyecto_id
   }
-  
+
   if (filtros.value.usuario_id) {
-    params.append('usuario_id', filtros.value.usuario_id)
+    params.usuario_id = filtros.value.usuario_id
   }
-  
-  const url = `/api/exportar/tareas-admin?${params.toString()}`
-  window.open(url, '_blank')
+
+  try {
+    const response = await axios.get('/api/exportar/tareas-admin', {
+      params,
+      responseType: 'blob',
+      withCredentials: true,
+    })
+
+    // Obtener filename desde headers (si está presente)
+    const disposition = response.headers['content-disposition'] || ''
+    let filename = 'reporte_tareas.xlsx'
+    const match = disposition.match(/filename\*?=([^;]+)/)
+    if (match) {
+      filename = match[1].replace(/UTF-8''/, '').replace(/"/g, '')
+    }
+
+    const blob = new Blob([response.data])
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(downloadUrl)
+  } catch (error) {
+    console.error('Error exportando reporte:', error)
+    if (error.response && error.response.status === 401) {
+      // Usuario no autenticado: redirigir a login o mostrar mensaje
+      // Ajusta esto según tu flujo de autenticación SPA
+      window.location.href = '/login'
+    }
+  }
 }
 </script>
 
