@@ -641,6 +641,92 @@
         </VCardActions>
       </VCard>
     </VDialog>
+
+    <!-- Modal Nueva Tarea -->
+    <VDialog
+      v-model="modalNuevaTareaVisible"
+      max-width="600px"
+      persistent
+    >
+      <VCard>
+        <VCardTitle>
+          <span class="text-h5">Nueva Tarea</span>
+        </VCardTitle>
+
+        <VCardText>
+          <VRow>
+            <VCol cols="12">
+              <VTextField
+                v-model="nuevaTarea.titulo"
+                label="Título *"
+                persistent-placeholder
+                variant="outlined"
+              />
+            </VCol>
+            
+            <VCol cols="12">
+              <VTextarea
+                v-model="nuevaTarea.descripcion"
+                label="Descripción"
+                rows="3"
+                variant="outlined"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <VSelect
+                v-model="nuevaTarea.proyecto_id"
+                :items="proyectos"
+                item-title="nombre_completo"
+                item-value="id"
+                label="Proyecto *"
+                variant="outlined"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <VSelect
+                v-model="nuevaTarea.prioridad"
+                :items="prioridades"
+                label="Prioridad"
+                variant="outlined"
+              />
+            </VCol>
+
+             <VCol cols="12" md="6">
+              <VSelect
+                v-model="nuevaTarea.responsable_id"
+                :items="usuarios"
+                item-title="name"
+                item-value="id"
+                label="Responsable"
+                variant="outlined"
+                clearable
+              />
+            </VCol>
+          </VRow>
+        </VCardText>
+
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            color="secondary"
+            variant="text"
+            @click="modalNuevaTareaVisible = false"
+          >
+            Cancelar
+          </VBtn>
+          <VBtn
+            color="primary"
+            variant="elevated"
+            @click="crearTarea"
+            :loading="cargando"
+          >
+            Guardar
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 
@@ -669,6 +755,14 @@ const proyectos = ref([])
 const usuarios = ref([])
 const tareaSeleccionada = ref(null)
 const modalDetalleVisible = ref(false)
+const modalNuevaTareaVisible = ref(false)
+const nuevaTarea = ref({
+  titulo: '',
+  descripcion: '',
+  prioridad: 'media',
+  proyecto_id: null,
+  responsable_id: null
+})
 const bitacora = ref([])
 const tabActiva = ref('detalles')
 
@@ -822,7 +916,35 @@ const cargarBitacora = async (tareaId) => {
 }
 
 const mostrarModalNuevaTarea = () => {
-  notificationStore.addNotification('Funcionalidad de crear tarea próximamente', 'info')
+  nuevaTarea.value = {
+    titulo: '',
+    descripcion: '',
+    prioridad: 'media',
+    proyecto_id: null,
+    responsable_id: null
+  }
+  modalNuevaTareaVisible.value = true
+}
+
+const crearTarea = async () => {
+  if (!nuevaTarea.value.titulo || !nuevaTarea.value.proyecto_id) {
+    notificationStore.addNotification('Por favor completa los campos obligatorios (Título y Proyecto)', 'warning')
+    return
+  }
+  
+  try {
+    cargando.value = true
+    await axios.post('/api/tareas', nuevaTarea.value)
+    
+    notificationStore.addNotification('Tarea creada exitosamente', 'success')
+    modalNuevaTareaVisible.value = false
+    await cargarDatos()
+  } catch (error) {
+    console.error('Error al crear tarea:', error)
+    notificationStore.addNotification('Error al crear la tarea', 'error')
+  } finally {
+    cargando.value = false
+  }
 }
 
 const getIniciales = (nombre) => {

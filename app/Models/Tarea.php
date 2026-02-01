@@ -134,7 +134,7 @@ class Tarea extends Model
             }
         });
 
-        // Después de crear: registrar en bitácora
+        // Después de crear: registrar en bitácora y notificar si hay responsable
         static::created(function ($tarea) {
             $nombreUsuario = $tarea->creado_por ?? 'Sistema';
             
@@ -144,6 +144,26 @@ class Tarea extends Model
                 "{$nombreUsuario} creó la tarea \"{$tarea->titulo}\"",
                 $tarea->creador_id
             );
+
+            // Si se asignó responsable al crear
+            if ($tarea->responsable_id) {
+                $responsable = User::find($tarea->responsable_id);
+                if ($responsable && $responsable->email) {
+                    try {
+                        \Illuminate\Support\Facades\Mail::to($responsable->email)
+                            ->send(new \App\Mail\TareaAsignadaMailable($tarea));
+                        
+                        // También registrar asignación en bitácora para constancia
+                        BitacoraTarea::registrar(
+                            $tarea->id,
+                            'asignada',
+                            "Asignada automáticamente a {$responsable->name} en la creación"
+                        );
+                    } catch (\Exception $e) {
+                         \Illuminate\Support\Facades\Log::error('Error enviando correo de asignación (creación): ' . $e->getMessage());
+                    }
+                }
+            }
         });
 
         // Después de actualizar: detectar cambios y registrar en bitácora
@@ -159,6 +179,17 @@ class Tarea extends Model
                     'asignada',
                     "{$nombreUsuario} asignó la tarea \"{$tarea->titulo}\" a {$responsable->name}"
                 );
+
+                // Enviar correo de notificación
+                if ($responsable && $responsable->email) {
+                    try {
+                        \Illuminate\Support\Facades\Mail::to($responsable->email)
+                            ->send(new \App\Mail\TareaAsignadaMailable($tarea));
+                    } catch (\Exception $e) {
+                        // Log error but don't stop execution
+                        \Illuminate\Support\Facades\Log::error('Error enviando correo de asignación de tarea: ' . $e->getMessage());
+                    }
+                }
             }
 
             // Cambio de estado

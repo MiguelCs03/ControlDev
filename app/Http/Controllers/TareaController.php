@@ -39,7 +39,7 @@ class TareaController extends Controller
             $query->where('prioridad', $request->prioridad);
         }
 
-        $tareas = $query->orderBy('created_at', 'desc')->get();
+        $tareas = $query->orderBy('creado_en', 'desc')->get();
 
         return response()->json($tareas);
     }
@@ -257,7 +257,7 @@ class TareaController extends Controller
             ],
             'tareas_recientes' => Tarea::where('responsable_id', $usuario->id)
                 ->with(['proyecto.cliente'])
-                ->orderBy('created_at', 'desc')
+                ->orderBy('creado_en', 'desc')
                 ->limit(5)
                 ->get(),
         ];
