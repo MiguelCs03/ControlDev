@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ticketing - Kanban Board</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/ticketing-kanban.css">
+    
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="ticketing-container">
+        <!-- Header con estadísticas -->
+        <div class="ticketing-header">
+            <div class="ticketing-header-top">
+                <h1 class="ticketing-title">
+                    <i class="fas fa-tasks"></i> Sistema de Ticketing
+                </h1>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-secondary" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i> Actualizar
+                    </button>
+                    <button class="btn btn-primary" onclick="showNewTaskModal()">
+                        <i class="fas fa-plus"></i> Nueva Tarea
+                    </button>
+                </div>
+            </div>
+            
+            <div class="ticketing-stats" id="stats">
+                <!-- Las estadísticas se cargarán aquí -->
+            </div>
+        </div>
+
+        <!-- Controles y filtros -->
+        <div class="ticketing-controls">
+            <div class="control-group">
+                <label class="control-label">Proyecto</label>
+                <select class="control-select" id="filter-proyecto" onchange="loadKanban()">
+                    <option value="">Todos los proyectos</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label class="control-label">Responsable</label>
+                <select class="control-select" id="filter-responsable" onchange="loadKanban()">
+                    <option value="">Todos los responsables</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label class="control-label">Prioridad</label>
+                <select class="control-select" id="filter-prioridad" onchange="loadKanban()">
+                    <option value="">Todas las prioridades</option>
+                    <option value="baja">Baja</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label class="control-label">Buscar</label>
+                <input type="text" class="control-input" id="search" placeholder="Buscar tareas..." oninput="filterTasks()">
+            </div>
+        </div>
+
+        <!-- Kanban Board -->
+        <div class="kanban-board" id="kanban-board">
+            <!-- Columna Pendiente -->
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <div class="kanban-column-title">
+                        <i class="fas fa-clock" style="color: var(--status-pendiente);"></i>
+                        Pendiente
+                    </div>
+                    <div class="column-badge pendiente" id="badge-pendiente">0</div>
+                </div>
+                <div class="kanban-tasks" id="tasks-pendiente">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando tareas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna En Proceso -->
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <div class="kanban-column-title">
+                        <i class="fas fa-spinner fa-spin" style="color: var(--status-proceso);"></i>
+                        En Proceso
+                    </div>
+                    <div class="column-badge en_proceso" id="badge-en_proceso">0</div>
+                </div>
+                <div class="kanban-tasks" id="tasks-en_proceso">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando tareas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna En Revisión -->
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <div class="kanban-column-title">
+                        <i class="fas fa-eye" style="color: var(--status-revision);"></i>
+                        En Revisión
+                    </div>
+                    <div class="column-badge en_revision" id="badge-en_revision">0</div>
+                </div>
+                <div class="kanban-tasks" id="tasks-en_revision">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando tareas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Finalizado -->
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <div class="kanban-column-title">
+                        <i class="fas fa-check-circle" style="color: var(--status-finalizado);"></i>
+                        Finalizado
+                    </div>
+                    <div class="column-badge finalizado" id="badge-finalizado">0</div>
+                </div>
+                <div class="kanban-tasks" id="tasks-finalizado">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando tareas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para detalles de tarea -->
+    <div id="task-modal" class="modal-overlay" style="display: none;" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+                <h2 id="modal-title"></h2>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- El contenido se cargará dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de la API
+        const API_URL = '/api';
+        const token = localStorage.getItem('auth_token'); // Asume que tienes el token guardado
+        
+        // Headers para peticiones
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+        };
+
+        // Estado global
+        let allTasks = {};
+        let allProjects = [];
+        let allUsers = [];
+
+        // Inicializar la aplicación
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInitialData();
+        });
+
+        // Cargar datos iniciales
+        async function loadInitialData() {
+            try {
+                await Promise.all([
+                    loadProjects(),
+                    loadUsers(),
+                    loadDashboard(),
+                    loadKanban()
+                ]);
+            } catch (error) {
+                console.error('Error cargando datos iniciales:', error);
+                showError('Error al cargar los datos. Por favor, recarga la página.');
+            }
+        }
+
+        // Cargar proyectos
+        async function loadProjects() {
+            try {
+                const response = await fetch(`${API_URL}/proyectos`, { headers });
+                const proyectos = await response.json();
+                allProjects = proyectos;
+                
+                const select = document.getElementById('filter-proyecto');
+                proyectos.forEach(proyecto => {
+                    const option = document.createElement('option');
+                    option.value = proyecto.id;
+                    option.textContent = `${proyecto.nombre} (${proyecto.cliente.nombre})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error cargando proyectos:', error);
+            }
+        }
+
+        // Cargar usuarios
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_URL}/users`, { headers });
+                const users = await response.json();
+                allUsers = users;
+                
+                const select = document.getElementById('filter-responsable');
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error cargando usuarios:', error);
+            }
+        }
+
+        // Cargar dashboard con estadísticas
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_URL}/dashboard-tareas`, { headers });
+                const data = await response.json();
+                
+                const statsContainer = document.getElementById('stats');
+                statsContainer.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Mis Tareas Activas</div>
+                        <div class="stat-value">
+                            ${data.mis_tareas.pendientes + data.mis_tareas.en_proceso + data.mis_tareas.en_revision}
+                            <span class="stat-icon">📋</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">En Proceso</div>
+                        <div class="stat-value">
+                            ${data.mis_tareas.en_proceso}
+                            <span class="stat-icon">⚡</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">En Revisión</div>
+                        <div class="stat-value">
+                            ${data.mis_tareas.en_revision}
+                            <span class="stat-icon">👁️</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Finalizadas</div>
+                        <div class="stat-value">
+                            ${data.mis_tareas.finalizadas}
+                            <span class="stat-icon">✅</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Urgentes</div>
+                        <div class="stat-value" style="color: var(--prioridad-urgente);">
+                            ${data.por_prioridad.urgente}
+                            <span class="stat-icon">🚨</span>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error cargando dashboard:', error);
+            }
+        }
+
+        // Cargar Kanban
+        async function loadKanban() {
+            try {
+                const proyectoId = document.getElementById('filter-proyecto').value;
+                const responsableId = document.getElementById('filter-responsable').value;
+                
+                let url = `${API_URL}/tareas-kanban?`;
+                if (proyectoId) url += `proyecto_id=${proyectoId}&`;
+                if (responsableId) url += `responsable_id=${responsableId}&`;
+                
+                const response = await fetch(url, { headers });
+                const data = await response.json();
+                
+                allTasks = data;
+                renderKanban(data);
+            } catch (error) {
+                console.error('Error cargando kanban:', error);
+                showError('Error al cargar las tareas');
+            }
+        }
+
+        // Renderizar Kanban
+        function renderKanban(tasks) {
+            const estados = ['pendiente', 'en_proceso', 'en_revision', 'finalizado'];
+            
+            estados.forEach(estado => {
+                const container = document.getElementById(`tasks-${estado}`);
+                const badge = document.getElementById(`badge-${estado}`);
+                const tasksInEstado = tasks[estado] || [];
+                
+                badge.textContent = tasksInEstado.length;
+                
+                if (tasksInEstado.length === 0) {
+                    container.innerHTML = `
+                        <div class="kanban-empty">
+                            <div class="kanban-empty-icon">📭</div>
+                            <div class="kanban-empty-text">No hay tareas aquí</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = tasksInEstado.map(task => createTaskCard(task)).join('');
+            });
+        }
+
+        // Crear tarjeta de tarea
+        function createTaskCard(task) {
+            const responsable = task.responsable || { name: 'Sin asignar' };
+            const initials = getInitials(responsable.name);
+            const timeInfo = getTimeInfo(task);
+            
+            return `
+                <div class="task-card prioridad-${task.prioridad}" onclick="showTaskDetails(${task.id})">
+                    <div class="task-header">
+                        <div style="flex: 1;">
+                            <div class="task-priority ${task.prioridad}">${task.prioridad}</div>
+                            <h3 class="task-title">${task.titulo}</h3>
+                        </div>
+                    </div>
+                    
+                    ${task.descripcion ? `<p class="task-description">${task.descripcion}</p>` : ''}
+                    
+                    <div class="task-project">
+                        <span class="task-client">${task.proyecto.cliente.nombre}</span> · ${task.proyecto.nombre}
+                    </div>
+                    
+                    <div class="task-meta">
+                        ${task.horas_estimadas ? `
+                            <div class="task-meta-item">
+                                <i class="fas fa-clock task-meta-icon"></i>
+                                ${task.horas_estimadas}h estimadas
+                            </div>
+                        ` : ''}
+                        ${task.tiempo_total_trabajado > 0 ? `
+                            <div class="task-meta-item">
+                                <i class="fas fa-hourglass-half task-meta-icon"></i>
+                                ${task.tiempo_total_trabajado}h trabajadas
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="task-footer">
+                        <div class="task-assignee">
+                            <div class="avatar">${initials}</div>
+                            <span class="assignee-name">${responsable.name}</span>
+                        </div>
+                        <div class="task-time">
+                            <i class="fas fa-calendar-alt"></i>
+                            ${timeInfo}
+                        </div>
+                    </div>
+                    
+                    <div class="task-actions">
+                        ${getTaskActions(task)}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Obtener iniciales del nombre
+        function getInitials(name) {
+            return name
+                .split(' ')
+                .map(n => n[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase();
+        }
+
+        // Obtener información de tiempo
+        function getTimeInfo(task) {
+            if (task.fecha_finalizacion) {
+                return `Finalizado ${formatDate(task.fecha_finalizacion)}`;
+            }
+            if (task.fecha_inicio_trabajo) {
+                return `Iniciado ${formatDate(task.fecha_inicio_trabajo)}`;
+            }
+            if (task.fecha_asignacion) {
+                return `Asignado ${formatDate(task.fecha_asignacion)}`;
+            }
+            return `Creado ${formatDate(task.created_at)}`;
+        }
+
+        // Formatear fecha
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+            
+            if (diff === 0) return 'hoy';
+            if (diff === 1) return 'ayer';
+            if (diff < 7) return `hace ${diff} días`;
+            if (diff < 30) return `hace ${Math.floor(diff / 7)} semanas`;
+            
+            return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        }
+
+        // Obtener acciones de tarea según estado
+        function getTaskActions(task) {
+            const actions = [];
+            
+            if (task.estado === 'pendiente') {
+                actions.push(`<button class="task-action-btn" onclick="event.stopPropagation(); cambiarEstado(${task.id}, 'en_proceso')">
+                    <i class="fas fa-play"></i> Iniciar
+                </button>`);
+            }
+            
+            if (task.estado === 'en_proceso') {
+                actions.push(`<button class="task-action-btn" onclick="event.stopPropagation(); cambiarEstado(${task.id}, 'en_revision')">
+                    <i class="fas fa-eye"></i> A Revisión
+                </button>`);
+            }
+            
+            if (task.estado === 'en_revision') {
+                actions.push(`<button class="task-action-btn" onclick="event.stopPropagation(); cambiarEstado(${task.id}, 'finalizado')">
+                    <i class="fas fa-check"></i> Finalizar
+                </button>`);
+            }
+            
+            return actions.join('');
+        }
+
+        // Cambiar estado de tarea
+        async function cambiarEstado(tareaId, nuevoEstado) {
+            try {
+                const response = await fetch(`${API_URL}/tareas/${tareaId}/estado`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({ estado: nuevoEstado })
+                });
+                
+                if (response.ok) {
+                    showSuccess(`Tarea movida a ${nuevoEstado.replace('_', ' ')}`);
+                    await loadKanban();
+                    await loadDashboard();
+                } else {
+                    throw new Error('Error al actualizar estado');
+                }
+            } catch (error) {
+                console.error('Error cambiando estado:', error);
+                showError('Error al cambiar el estado de la tarea');
+            }
+        }
+
+        // Mostrar detalles de tarea
+        async function showTaskDetails(tareaId) {
+            try {
+                const response = await fetch(`${API_URL}/tareas/${tareaId}`, { headers });
+                const task = await response.json();
+                
+                const modal = document.getElementById('task-modal');
+                const modalTitle = document.getElementById('modal-title');
+                const modalBody = document.getElementById('modal-body');
+                
+                modalTitle.textContent = task.titulo;
+                
+                modalBody.innerHTML = `
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <span class="task-priority ${task.prioridad}">${task.prioridad}</span>
+                            <span class="task-priority" style="background: var(--bg-tertiary);">${task.estado.replace('_', ' ')}</span>
+                        </div>
+                        <p style="color: var(--text-secondary); line-height: 1.6;">${task.descripcion || 'Sin descripción'}</p>
+                    </div>
+                    
+                    <div style="background: var(--bg-tertiary); padding: 1.5rem; border-radius: 0.75rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Información del Proyecto</h4>
+                        <p style="margin: 0; color: var(--text-secondary);">
+                            <strong>Cliente:</strong> ${task.proyecto.cliente.nombre}<br>
+                            <strong>Proyecto:</strong> ${task.proyecto.nombre}
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem;">
+                            <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Horas Estimadas</div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${task.horas_estimadas || '-'}</div>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem;">
+                            <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Horas Trabajadas</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--status-proceso);">${task.tiempo_total_trabajado || 0}</div>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem;">
+                            <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Días Transcurridos</div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${task.dias_transcurridos || 0}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Responsables</h4>
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem;">
+                            <p style="margin: 0; color: var(--text-secondary);">
+                                <strong>Creado por:</strong> ${task.creador.name}<br>
+                                <strong>Asignado a:</strong> ${task.responsable ? task.responsable.name : 'Sin asignar'}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                        <button class="btn btn-primary" onclick="closeModal()">Cerrar</button>
+                        ${task.estado !== 'finalizado' ? `
+                            <button class="btn btn-secondary" onclick="editTask(${task.id})">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+                
+                modal.style.display = 'flex';
+            } catch (error) {
+                console.error('Error cargando detalles:', error);
+                showError('Error al cargar los detalles de la tarea');
+            }
+        }
+
+        // Cerrar modal
+        function closeModal(event) {
+            if (!event || event.target.classList.contains('modal-overlay')) {
+                document.getElementById('task-modal').style.display = 'none';
+            }
+        }
+
+        // Filtrar tareas
+        function filterTasks() {
+            const searchTerm = document.getElementById('search').value.toLowerCase();
+            
+            if (!searchTerm) {
+                renderKanban(allTasks);
+                return;
+            }
+            
+            const filtered = {};
+            
+            Object.keys(allTasks).forEach(estado => {
+                filtered[estado] = allTasks[estado].filter(task => 
+                    task.titulo.toLowerCase().includes(searchTerm) ||
+                    (task.descripcion && task.descripcion.toLowerCase().includes(searchTerm)) ||
+                    task.proyecto.nombre.toLowerCase().includes(searchTerm) ||
+                    task.proyecto.cliente.nombre.toLowerCase().includes(searchTerm)
+                );
+            });
+            
+            renderKanban(filtered);
+        }
+
+        // Mensajes de éxito y error
+        function showSuccess(message) {
+            // Aquí puedes implementar un sistema de notificaciones
+            console.log('✅', message);
+            alert(message);
+        }
+
+        function showError(message) {
+            console.error('❌', message);
+            alert(message);
+        }
+
+        // Función placeholder para nueva tarea
+        function showNewTaskModal() {
+            alert('Función de crear nueva tarea - Implementa tu propio formulario o integra con tu sistema existente');
+        }
+
+        function editTask(id) {
+            alert(`Editar tarea ${id} - Implementa tu propio formulario de edición`);
+        }
+    </script>
+</body>
+</html>

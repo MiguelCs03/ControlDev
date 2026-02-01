@@ -214,5 +214,38 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('parametros/conceptos', [ConceptoRemuneracionController::class, 'crearConcepto']);
     Route::put('parametros/conceptos/{id}', [ConceptoRemuneracionController::class, 'editarConcepto']);
     Route::delete('parametros/conceptos/{id}', [ConceptoRemuneracionController::class, 'eliminarConcepto']);
+
+    //============================= SISTEMA DE TICKETING =====================================
+    
+    // CLIENTES
+    Route::apiResource('clientes', \App\Http\Controllers\ClienteController::class);
+    
+    // PROYECTOS
+    Route::apiResource('proyectos', \App\Http\Controllers\ProyectoController::class);
+    Route::get('proyectos/{proyecto}/estadisticas', [\App\Http\Controllers\ProyectoController::class, 'estadisticas']);
+    
+    // TAREAS
+    Route::apiResource('tareas', \App\Http\Controllers\TareaController::class);
+    Route::patch('tareas/{tarea}/estado', [\App\Http\Controllers\TareaController::class, 'actualizarEstado']);
+    Route::post('tareas/{tarea}/iniciar-tiempo', [\App\Http\Controllers\TareaController::class, 'iniciarTiempo']);
+    Route::post('tareas/{tarea}/detener-tiempo', [\App\Http\Controllers\TareaController::class, 'detenerTiempo']);
+    Route::get('tareas/{tarea}/bitacora', [\App\Http\Controllers\TareaController::class, 'bitacora']);
+    Route::get('tareas-kanban', [\App\Http\Controllers\TareaController::class, 'kanban']);
+    Route::get('dashboard-tareas', [\App\Http\Controllers\TareaController::class, 'dashboard']);
+    
+    // EXPORTAR TAREAS
+    Route::get('exportar/mis-tareas', [\App\Http\Controllers\TareaController::class, 'exportarMisTareas']);
+    Route::get('exportar/tareas-admin', [\App\Http\Controllers\TareaController::class, 'exportarTareasAdmin']);
+    
+    // COMENTARIOS
+    Route::get('tareas/{tarea}/comentarios', [\App\Http\Controllers\ComentarioController::class, 'index']);
+    Route::post('tareas/{tarea}/comentarios', [\App\Http\Controllers\ComentarioController::class, 'store']);
+    Route::delete('comentarios/{comentario}', [\App\Http\Controllers\ComentarioController::class, 'destroy']);
+    
+    // ADJUNTOS
+    Route::get('tareas/{tarea}/adjuntos', [\App\Http\Controllers\AdjuntoController::class, 'index']);
+    Route::post('tareas/{tarea}/adjuntos', [\App\Http\Controllers\AdjuntoController::class, 'store']);
+    Route::get('adjuntos/{adjunto}/download', [\App\Http\Controllers\AdjuntoController::class, 'download']);
+    Route::delete('adjuntos/{adjunto}', [\App\Http\Controllers\AdjuntoController::class, 'destroy']);
         
 });

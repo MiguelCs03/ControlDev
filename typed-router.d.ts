@@ -93,5 +93,8 @@ declare module 'vue-router/auto-routes' {
     'perfil': RouteRecordInfo<'perfil', '/perfil', Record<never, never>, Record<never, never>>,
     'register': RouteRecordInfo<'register', '/register', Record<never, never>, Record<never, never>>,
     'reset-password': RouteRecordInfo<'reset-password', '/reset-password', Record<never, never>, Record<never, never>>,
+    'ticketing-kanban': RouteRecordInfo<'ticketing-kanban', '/TicketingKanban', Record<never, never>, Record<never, never>>,
+    'ticketing-proyectos': RouteRecordInfo<'ticketing-proyectos', '/TicketingProyectos', Record<never, never>, Record<never, never>>,
+    'ticketing-reportes': RouteRecordInfo<'ticketing-reportes', '/TicketingReportes', Record<never, never>, Record<never, never>>,
   }
 }
