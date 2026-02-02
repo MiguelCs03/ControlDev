@@ -214,6 +214,26 @@ class Tarea extends Model
                     null,
                     ['estado_anterior' => $estadoAnterior, 'estado_nuevo' => $estadoNuevo]
                 );
+
+                // Si la tarea pasa a "en_revision", notificar a los administradores
+                if ($estadoNuevo === 'en_revision') {
+                    // Obtener administradores
+                    // Asumiendo que el rol 1 es admin o buscando por nombre de rol
+                    $admins = User::whereHas('roles', function ($query) {
+                        $query->whereIn('nombre', ['admin', 'administrador', 'administrator']);
+                    })->get();
+
+                    foreach ($admins as $admin) {
+                        if ($admin->email) {
+                            try {
+                                \Illuminate\Support\Facades\Mail::to($admin->email)
+                                    ->send(new \App\Mail\TareaEnRevisionMailable($tarea, Auth::user()));
+                            } catch (\Exception $e) {
+                                \Illuminate\Support\Facades\Log::error('Error enviando correo de revisión a admin: ' . $e->getMessage());
+                            }
+                        }
+                    }
+                }
             }
 
             // Cambio de fecha_inicio
