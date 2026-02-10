@@ -53,8 +53,10 @@ onMounted(() => {
 import axios from 'axios'
 import { fetchMenus } from '@/store/menu'
 import { useNotificationStore } from '@/store/notification'
+import { useUserStore } from '@/store/user'
 
 const notificationStore = useNotificationStore()
+const userStore = useUserStore()
 
 const login = async () => {
   try {
@@ -85,6 +87,10 @@ const login = async () => {
     useCookie('userAbilityRules').value = userAbilityRules
     useCookie('userData').value = userData
     useCookie('accessToken').value = accessToken
+    
+    // PASO 2.5: Inicializar el store de usuario
+    userStore.setUserData(userData)
+    console.log('👤 Store de usuario inicializado con:', userData.name)
     
     console.log('💾 Token guardado en localStorage:', localStorage.getItem('accessToken') ? 'SÍ' : 'NO')
     console.log('👤 userData guardado en localStorage:', localStorage.getItem('userData') ? 'SÍ' : 'NO')

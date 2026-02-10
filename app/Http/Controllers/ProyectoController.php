@@ -145,4 +145,32 @@ class ProyectoController extends Controller
 
         return response()->json($estadisticas);
     }
+
+    // Obtener usuarios que participan en un proyecto
+    public function usuarios(Proyecto $proyecto)
+    {
+        // Obtener usuarios únicos que tienen tareas en este proyecto
+        $usuariosResponsables = \DB::table('tareas')
+            ->where('proyecto_id', $proyecto->id)
+            ->whereNotNull('responsable_id')
+            ->distinct()
+            ->pluck('responsable_id');
+
+        $usuariosCreadores = \DB::table('tareas')
+            ->where('proyecto_id', $proyecto->id)
+            ->whereNotNull('creado_por')
+            ->distinct()
+            ->pluck('creado_por');
+
+        // Combinar ambos arrays y obtener IDs únicos
+        $usuarioIds = $usuariosResponsables->merge($usuariosCreadores)->unique()->values();
+
+        // Obtener los usuarios
+        $usuarios = \App\Models\User::whereIn('id', $usuarioIds)
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json($usuarios);
+    }
 }

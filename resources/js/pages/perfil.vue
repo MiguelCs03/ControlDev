@@ -3,9 +3,11 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useNotificationStore } from '@/store/notification'
+import { useUserStore } from '@/store/user'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const userStore = useUserStore()
 
 // Get user data from cookie
 const userData = ref(null)
@@ -209,14 +211,8 @@ const uploadAvatar = async () => {
         avatar_url: data.avatar_url,
       }
       
-      // Actualizar también la cookie
-      const userDataCookie = useCookie('userData')
-      if (userDataCookie.value) {
-        userDataCookie.value = {
-          ...userDataCookie.value,
-          avatar: data.avatar_url,
-        }
-      }
+      // Actualizar el store para que se refleje en toda la aplicación
+      userStore.updateAvatar(data.avatar_url)
       
       closeAvatarModal()
       

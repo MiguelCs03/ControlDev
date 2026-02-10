@@ -1,12 +1,14 @@
 <script setup>
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 import axios from 'axios'
+import { useUserStore } from '@/store/user'
 
 const router = useRouter()
 const ability = useAbility()
+const userStore = useUserStore()
 
-// TODO: Get type from backend
-const userData = useCookie('userData')
+// Usar el store para obtener datos del usuario de forma reactiva
+const userData = computed(() => userStore.userData)
 
 const logout = async () => {
   try {
@@ -15,6 +17,9 @@ const logout = async () => {
   } catch (error) {
     console.error('Error al cerrar sesión:', error)
   } finally {
+    // Limpiar el store de usuario PRIMERO
+    userStore.clearUserData()
+    
     // Eliminar TODOS los datos del localStorage
     localStorage.removeItem('accessToken')
     localStorage.removeItem('userData')

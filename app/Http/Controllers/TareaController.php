@@ -53,6 +53,9 @@ class TareaController extends Controller
             'prioridad' => 'in:baja,media,alta,urgente',
             'proyecto_id' => 'required|exists:proyectos,id',
             'responsable_id' => 'nullable|exists:users,id',
+            'modulo' => 'nullable|string|max:255',
+            'vista' => 'nullable|string|max:255',
+            'nota' => 'nullable|string',
         ]);
 
         $validated['creador_id'] = Auth::id();

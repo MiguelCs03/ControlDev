@@ -223,6 +223,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // PROYECTOS
     Route::apiResource('proyectos', \App\Http\Controllers\ProyectoController::class);
     Route::get('proyectos/{proyecto}/estadisticas', [\App\Http\Controllers\ProyectoController::class, 'estadisticas']);
+    Route::get('proyectos/{proyecto}/usuarios', [\App\Http\Controllers\ProyectoController::class, 'usuarios']);
     
     // TAREAS
     Route::apiResource('tareas', \App\Http\Controllers\TareaController::class);
@@ -247,5 +248,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('tareas/{tarea}/adjuntos', [\App\Http\Controllers\AdjuntoController::class, 'store']);
     Route::get('adjuntos/{adjunto}/download', [\App\Http\Controllers\AdjuntoController::class, 'download']);
     Route::delete('adjuntos/{adjunto}', [\App\Http\Controllers\AdjuntoController::class, 'destroy']);
+    
+    // DÍAS FERIADOS
+    Route::apiResource('dias-feriados', \App\Http\Controllers\DiaFeriadoController::class);
+    Route::get('dias-no-laborables', [\App\Http\Controllers\DiaFeriadoController::class, 'diasNoLaborables']);
+    Route::get('verificar-dia-laborable', [\App\Http\Controllers\DiaFeriadoController::class, 'verificarDiaLaborable']);
+    Route::post('calcular-dias-laborables', [\App\Http\Controllers\DiaFeriadoController::class, 'calcularDiasLaborables']);
+    Route::post('importar-feriados-bolivia', [\App\Http\Controllers\DiaFeriadoController::class, 'importarFeriadosBolivia']);
+    Route::post('marcar-domingos', [\App\Http\Controllers\DiaFeriadoController::class, 'marcarDomingos']);
+    Route::post('marcar-fines-de-semana', [\App\Http\Controllers\DiaFeriadoController::class, 'marcarFinesDeSemana']);
         
 });

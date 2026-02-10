@@ -22,6 +22,7 @@
           />
 
           <VBtn
+            v-if="$can('create', 'TicketingProyectos')"
             color="success"
             prepend-icon="tabler-plus"
             @click="mostrarModalCrear"
@@ -76,6 +77,7 @@
           <div class="d-flex gap-2">
             <!-- Editar -->
             <VBtn
+              v-if="$can('update', 'TicketingProyectos')"
               icon="tabler-pencil"
               size="small"
               color="primary"
@@ -85,6 +87,7 @@
 
             <!-- Eliminar -->
             <VBtn
+              v-if="$can('delete', 'TicketingProyectos')"
               icon="tabler-trash"
               size="small"
               color="error"
@@ -359,9 +362,9 @@ import { useNotificationStore } from '@/store/notification'
 // Define metadata para la página
 definePage({
   meta: {
-    section: 'ticketing-proyectos',
+    section: 'TicketingProyectos',
     action: 'read',
-    subject: 'ticketing-proyectos',
+    subject: 'TicketingProyectos',
   },
 })
 

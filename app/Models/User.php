@@ -77,9 +77,12 @@ class User extends Authenticatable
         return $this->roles()->detach($role);
     }
 
-    // Verificar si el usuario tiene un rol por nombre
+    // Verificar si el usuario tiene un rol por nombre (acepta string o array)
     public function hasRole($roleName)
     {
+        if (is_array($roleName)) {
+            return $this->roles()->whereIn('nombre', $roleName)->exists();
+        }
         return $this->roles()->where('nombre', $roleName)->exists();
     }
 

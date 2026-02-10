@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use App\Models\DiaFeriado;
 
 class TareasExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
@@ -67,6 +68,8 @@ class TareasExport implements FromCollection, WithHeadings, WithMapping, WithSty
             'Fecha Inicio',
             'Fecha Fin',
             'Duración (días)',
+            'Días Laborables',
+            'Días No Laborables',
             'Tiempo Trabajado (hrs)',
             'Observaciones',
             'Creado Por',
@@ -75,6 +78,7 @@ class TareasExport implements FromCollection, WithHeadings, WithMapping, WithSty
 
         return $headings;
     }
+
 
     /**
      * Mapear cada tarea a sus columnas
@@ -86,10 +90,31 @@ class TareasExport implements FromCollection, WithHeadings, WithMapping, WithSty
 
         // Calcular duración en días
         $duracion = '-';
+        $diasLaborables = '-';
+        $diasNoLaborables = '-';
+        
         if ($tarea->fecha_inicio && $tarea->fecha_fin) {
-            $duracion = $tarea->fecha_inicio->diffInDays($tarea->fecha_fin);
+            $totalDias = $tarea->fecha_inicio->diffInDays($tarea->fecha_fin) + 1;
+            $duracion = $totalDias;
+            
+            // Calcular días laborables
+            $laborables = DiaFeriado::calcularDiasLaborables(
+                $tarea->fecha_inicio,
+                $tarea->fecha_fin
+            );
+            $diasLaborables = $laborables;
+            $diasNoLaborables = $totalDias - $laborables;
         } elseif ($tarea->fecha_inicio) {
-            $duracion = $tarea->fecha_inicio->diffInDays(now()) . ' (en curso)';
+            $totalDias = $tarea->fecha_inicio->diffInDays(now()) + 1;
+            $duracion = $totalDias . ' (en curso)';
+            
+            // Calcular días laborables hasta hoy
+            $laborables = DiaFeriado::calcularDiasLaborables(
+                $tarea->fecha_inicio,
+                now()
+            );
+            $diasLaborables = $laborables . ' (en curso)';
+            $diasNoLaborables = $totalDias - $laborables;
         }
 
         // Observaciones (últimos comentarios o bitácora)
@@ -111,12 +136,15 @@ class TareasExport implements FromCollection, WithHeadings, WithMapping, WithSty
             $tarea->fecha_inicio ? $tarea->fecha_inicio->format('d/m/Y H:i') : '-',
             $tarea->fecha_fin ? $tarea->fecha_fin->format('d/m/Y H:i') : '-',
             $duracion,
+            $diasLaborables,
+            $diasNoLaborables,
             number_format($tiempoTrabajado, 2),
             $observaciones,
             $tarea->creado_por ?? '-',
             $tarea->creado_en ? $tarea->creado_en->format('d/m/Y H:i') : '-',
         ];
     }
+
 
     /**
      * Estilos para el Excel

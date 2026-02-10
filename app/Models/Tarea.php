@@ -23,6 +23,9 @@ class Tarea extends Model
         'responsable_id',
         'fecha_inicio',
         'fecha_fin',
+        'modulo',
+        'vista',
+        'nota',
         'creado_por',
         'creado_en',
         'modificado_por',
@@ -214,6 +217,16 @@ class Tarea extends Model
                     null,
                     ['estado_anterior' => $estadoAnterior, 'estado_nuevo' => $estadoNuevo]
                 );
+
+                // Notificar al responsable del cambio de estado
+                if ($tarea->responsable && $tarea->responsable->email) {
+                    try {
+                        \Illuminate\Support\Facades\Mail::to($tarea->responsable->email)
+                            ->send(new \App\Mail\TareaCambioEstadoMailable($tarea));
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Error enviando correo de cambio de estado: ' . $e->getMessage());
+                    }
+                }
 
                 // Si la tarea pasa a "en_revision", notificar a los administradores
                 if ($estadoNuevo === 'en_revision') {
