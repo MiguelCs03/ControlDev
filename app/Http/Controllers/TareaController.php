@@ -8,6 +8,7 @@ use App\Exports\TareasExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class TareaController extends Controller
@@ -296,23 +297,32 @@ class TareaController extends Controller
         // Verificar si el usuario es admin (ajustar según tu lógica de roles)
         // Por ahora, cualquier usuario autenticado puede exportar
         
-        $usuarioId = $request->query('usuario_id');
-        $proyectoId = $request->query('proyecto_id');
+        $usuarioId   = $request->query('usuario_id');
+        $proyectoId  = $request->query('proyecto_id');
+        $fechaDesde  = $request->query('fecha_desde');
+        $fechaHasta  = $request->query('fecha_hasta');
 
         $sufijo = '';
+        if ($fechaDesde && $fechaHasta) {
+            $sufijo = '_' . $fechaDesde . '_al_' . $fechaHasta;
+        } elseif ($fechaDesde) {
+            $sufijo = '_desde_' . $fechaDesde;
+        } elseif ($fechaHasta) {
+            $sufijo = '_hasta_' . $fechaHasta;
+        }
         if ($usuarioId) {
             $usuario = \App\Models\User::find($usuarioId);
-            $sufijo = '_' . ($usuario ? str_slug($usuario->name) : 'usuario_' . $usuarioId);
+            $sufijo .= '_' . ($usuario ? Str::slug($usuario->name) : 'u' . $usuarioId);
         }
         if ($proyectoId) {
             $proyecto = \App\Models\Proyecto::find($proyectoId);
-            $sufijo .= '_' . ($proyecto ? str_slug($proyecto->nombre) : 'proyecto_' . $proyectoId);
+            $sufijo .= '_' . ($proyecto ? Str::slug($proyecto->nombre) : 'p' . $proyectoId);
         }
 
         $nombreArchivo = 'reporte_tareas' . $sufijo . '_' . date('Y-m-d_His') . '.xlsx';
 
         return Excel::download(
-            new TareasExport($usuarioId, $proyectoId, true),
+            new TareasExport($usuarioId, $proyectoId, true, $fechaDesde, $fechaHasta),
             $nombreArchivo
         );
     }

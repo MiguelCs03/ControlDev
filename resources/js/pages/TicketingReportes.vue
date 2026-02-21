@@ -51,13 +51,39 @@
               density="comfortable"
               :disabled="cargandoUsuarios"
               :loading="cargandoUsuarios"
-              hint="Selecciona un proyecto primero para ver solo sus desarrolladores"
+              :hint="filtros.proyecto_id ? 'Todos los desarrolladores incluidos por defecto' : 'Selecciona un proyecto primero para ver solo sus desarrolladores'"
               persistent-hint
             />
           </VCol>
 
+          <!-- Rango de fechas -->
+          <VCol cols="12" md="3">
+            <VTextField
+              v-model="filtros.fecha_desde"
+              label="Fecha desde"
+              type="date"
+              prepend-inner-icon="tabler-calendar-event"
+              variant="outlined"
+              density="comfortable"
+              clearable
+            />
+          </VCol>
+
+          <VCol cols="12" md="3">
+            <VTextField
+              v-model="filtros.fecha_hasta"
+              label="Fecha hasta"
+              type="date"
+              prepend-inner-icon="tabler-calendar-event"
+              variant="outlined"
+              density="comfortable"
+              clearable
+              :min="filtros.fecha_desde || undefined"
+            />
+          </VCol>
+
           <!-- Botones de acción -->
-          <VCol cols="12" md="4" class="d-flex align-center gap-2">
+          <VCol cols="12" md="2" class="d-flex align-center gap-2">
             <VBtn
               color="primary"
               prepend-icon="tabler-eye"
@@ -65,15 +91,19 @@
               @click="cargarVistaPrevia"
               :loading="cargandoPrevia"
               variant="outlined"
+              block
             >
               Vista Previa
             </VBtn>
+          </VCol>
+          <VCol cols="12" md="2" class="d-flex align-center">
             <VBtn
               color="success"
               prepend-icon="tabler-file-spreadsheet"
               size="large"
               @click="exportarReporte"
               :disabled="!hayTareas"
+              block
             >
               Exportar
             </VBtn>
@@ -417,6 +447,8 @@ const mesActual = ref('')
 const filtros = ref({
   proyecto_id: null,
   usuario_id: null,
+  fecha_desde: null,
+  fecha_hasta: null,
 })
 
 // Vista previa
@@ -540,11 +572,17 @@ const cargarUsuariosDelProyecto = async (proyectoId) => {
   cargandoUsuarios.value = true
   try {
     const response = await axios.get(`/api/proyectos/${proyectoId}/usuarios`)
-    usuariosFiltrados.value = response.data
+    // Agregar opción "Todos los desarrolladores" al inicio
+    usuariosFiltrados.value = [
+      { id: null, name: '\ud83d\udc65 Todos los desarrolladores' },
+      ...response.data
+    ]
   } catch (error) {
     console.error('Error al cargar usuarios del proyecto:', error)
-    // Si falla, mostrar todos los usuarios
-    usuariosFiltrados.value = usuarios.value
+    usuariosFiltrados.value = [
+      { id: null, name: '\ud83d\udc65 Todos los desarrolladores' },
+      ...usuarios.value
+    ]
   } finally {
     cargandoUsuarios.value = false
   }
@@ -580,13 +618,10 @@ const cargarEstadisticas = async () => {
 const exportarReporte = async () => {
   const params = {}
 
-  if (filtros.value.proyecto_id) {
-    params.proyecto_id = filtros.value.proyecto_id
-  }
-
-  if (filtros.value.usuario_id) {
-    params.usuario_id = filtros.value.usuario_id
-  }
+  if (filtros.value.proyecto_id) params.proyecto_id = filtros.value.proyecto_id
+  if (filtros.value.usuario_id)  params.usuario_id  = filtros.value.usuario_id
+  if (filtros.value.fecha_desde) params.fecha_desde = filtros.value.fecha_desde
+  if (filtros.value.fecha_hasta) params.fecha_hasta = filtros.value.fecha_hasta
 
   try {
     const response = await axios.get('/api/exportar/tareas-admin', {
@@ -679,14 +714,11 @@ const cargarVistaPrevia = async () => {
       with: 'proyecto,responsable' // Incluir relaciones
     }
     
-    if (filtros.value.proyecto_id) {
-      params.proyecto_id = filtros.value.proyecto_id
-    }
-    
-    if (filtros.value.usuario_id) {
-      params.responsable_id = filtros.value.usuario_id
-    }
-    
+    if (filtros.value.proyecto_id) params.proyecto_id   = filtros.value.proyecto_id
+    if (filtros.value.usuario_id)  params.responsable_id = filtros.value.usuario_id
+    if (filtros.value.fecha_desde) params.fecha_desde    = filtros.value.fecha_desde
+    if (filtros.value.fecha_hasta) params.fecha_hasta    = filtros.value.fecha_hasta
+
     const response = await axios.get('/api/tareas', { params })
     tareasPrevia.value = response.data
   } catch (error) {
